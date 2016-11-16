@@ -153,12 +153,10 @@ logshare-cli --api-email=you@example.com --api-key=qwerty123 --zone-name=example
 
 In rough order of importance:
 
-* Write tests.
-* More examples (inc. for the library itself)
+* Tests.
+* More examples.
 * Support multiple destinations (construct a `MultiWriter` to allow writing to stdout, files & HTTP
   simultaneously)
-* Provide some guards around invalid flag parameters for logshare-cli
-  to avoid having to fetch this separately.
 * Add a `--els-bulk={url}` flag that allows a [bulk
   import](https://www.elastic.co/guide/en/elasticsearch/guide/current/bulk.html)
   into Elasticsearch.
