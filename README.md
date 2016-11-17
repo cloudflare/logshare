@@ -39,8 +39,9 @@ Please raise an issue on this repository, and include:
   first).
 * Any error output from `logshare-cli`.
 * The expected behaviour.
+* Make sure to redact any API keys, email addresses and/or zone IDs when submitting an issue.
 
-Note: *Make sure to redact any API keys, email addresses and/or zone IDs when submitting an issue.*
+> Cloudflare's support team may not be able to resolve issues with the logshare library/client.
 
 ### Available Options
 
