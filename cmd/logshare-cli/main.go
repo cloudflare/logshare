@@ -26,9 +26,6 @@ func main() {
 	app.Flags = flags
 	app.Version = Rev
 
-	// TODO: Hand off here to a function that checks which flags/combinations
-	// are defined, validates input, and then runs the appropriate action
-	// (function).
 	conf := &config{}
 	app.Action = run(conf)
 	app.Run(os.Args)
@@ -73,7 +70,6 @@ func run(conf *config) func(c *cli.Context) error {
 			}
 		}
 
-		// TODO: Log metadata to stderr
 		log.Printf("HTTP status %d | %dms | %s",
 			meta.StatusCode, meta.Duration, meta.URL)
 		log.Printf("Retrieved %d logs", meta.Count)

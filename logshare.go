@@ -55,7 +55,6 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		return nil, errors.New("apiEmail cannot be empty")
 	}
 
-	// TODO(matt): Tidy up.
 	client := &Client{
 		apiKey:     apiKey,
 		apiEmail:   apiEmail,
