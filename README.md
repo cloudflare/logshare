@@ -104,15 +104,6 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --sta
    1 405
 ```
 
-#### Top 10 User-Agents
-
-```
-$ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871 --count=20000 | jq '. | .clientRequest.userAgent' | uniq -c | sort -rn | head -n 10
-```
-```
-abc
-```
-
 #### Top 10 Visitor Countries
 
 ```
@@ -130,24 +121,6 @@ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start
  476 "au"
  464 "jp"
  437 "fr"
-```
-
-#### Top 25 Visitor IPs who have triggered HTTP 403's
-
-```
-logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871
---count=20000 | jq '. | select(.edgeResponse.status | contains(403)) | .client.ip' | uniq -c | sort -rn | head -n 25
-```
-```
-
-```
-#### Distribution of TLS protocols (TLS 1.0, TLS 1.1, TLS 1.2, TLS 1.3)
-
-
-#### Distribution of Request Durations (in ms)
-
-```
-logshare-cli --api-email=you@example.com --api-key=qwerty123 --zone-name=example.com --start-time=`hours-ago 72` --end-time=`mins-ago 1` | jq '.[] | .cache.endTimestamp -= .cache.startTimestamp | .cache.endTimestamp /= 1000000 | { "duration": .cache.endTimestamp }'
 ```
 
 ## TODO:
