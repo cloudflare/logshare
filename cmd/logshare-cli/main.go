@@ -6,7 +6,7 @@ import (
 	"time"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
-	"github.com/elithrar/logshare"
+	"github.com/cloudflare/logshare"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
