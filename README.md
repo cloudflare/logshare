@@ -27,9 +27,8 @@ $ logshare-cli <options>
 ```
 
 You can also download pre-built Linux binaries of `logshare-cli` from the
-[Releases](https://github.com/cloudflare/logshare/releases) tab on GitHub. Windows and macOS (nee OS
-X) binaries cannot be automatically built, although we will endeavour to attach these manually where
-possible.
+[Releases](https://github.com/cloudflare/logshare/releases) tab on GitHub for Linux, Windows and macOS (nee OS
+X).
 
 ## Support
 
