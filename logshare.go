@@ -11,7 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-var apiURL = "https://api.cloudflare.com/client/v4"
+const (
+	apiURL     = "https://api.cloudflare.com/client/v4"
+	byRequest  = "requests"
+	byReceived = "received"
+)
 
 // Client holds the current API credentials & HTTP client configuration. Client
 // should not be modified concurrently.
@@ -19,6 +23,7 @@ type Client struct {
 	endpoint   string
 	apiKey     string
 	apiEmail   string
+	byReceived bool
 	httpClient *http.Client
 	dest       io.Writer
 	headers    http.Header
@@ -32,6 +37,8 @@ type Options struct {
 	Headers http.Header
 	// Destination to stream logs to.
 	Dest io.Writer
+	// Fetch logs by the processing/recieved timestamp
+	ByReceived bool
 }
 
 // Meta contains data about the API response: the number of logs returned,
@@ -55,6 +62,11 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		return nil, errors.New("apiEmail cannot be empty")
 	}
 
+	var byReceived bool
+	if options != nil {
+		byReceived = options.ByReceived
+	}
+
 	client := &Client{
 		apiKey:     apiKey,
 		apiEmail:   apiEmail,
@@ -62,15 +74,25 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		httpClient: http.DefaultClient,
 		dest:       os.Stdout,
 		headers:    make(http.Header),
+		byReceived: byReceived,
 	}
 
 	return client, nil
 }
 
+func (c *Client) buildURL(zoneID string) string {
+	endpoint := byRequest
+	if c.byReceived {
+		endpoint = byReceived
+	}
+
+	return fmt.Sprintf("%s/zones/%s/logs/%s", c.endpoint, zoneID, endpoint)
+}
+
 // GetFromRayID fetches logs for the given rayID, or starting at the given rayID
 // if a non-zero end timestamp is provided.
 func (c *Client) GetFromRayID(zoneID string, rayID string, end int64, count int) (*Meta, error) {
-	url := fmt.Sprintf("%s/zones/%s/logs/requests?start_id=%s", c.endpoint, zoneID, rayID)
+	url := fmt.Sprintf("%s?start_id=%s", c.buildURL(zoneID), rayID)
 
 	if end > 0 {
 		url += fmt.Sprintf("&end=%d", end)
@@ -86,7 +108,7 @@ func (c *Client) GetFromRayID(zoneID string, rayID string, end int64, count int)
 // GetFromTimestamp fetches logs between the start and end timestamps provided,
 // (up to 'count' logs).
 func (c *Client) GetFromTimestamp(zoneID string, start int64, end int64, count int) (*Meta, error) {
-	url := fmt.Sprintf("%s/zones/%s/logs/requests?start=%d", c.endpoint, zoneID, start)
+	url := fmt.Sprintf("%s?start=%d", c.buildURL(zoneID), start)
 
 	if end > 0 {
 		url += fmt.Sprintf("&end=%d", end)

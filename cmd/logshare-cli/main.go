@@ -48,7 +48,7 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.zoneID = id
 		}
 
-		client, err := logshare.New(conf.apiKey, conf.apiEmail, nil)
+		client, err := logshare.New(conf.apiKey, conf.apiEmail, &logshare.Options{ByReceived: conf.byReceived})
 		if err != nil {
 			return err
 		}
@@ -87,19 +87,21 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.startTime = c.Int64("start-time")
 	conf.endTime = c.Int64("end-time")
 	conf.count = c.Int("count")
+	conf.byReceived = c.Bool("by-received")
 
 	return conf.Validate()
 }
 
 type config struct {
-	apiKey    string
-	apiEmail  string
-	rayID     string
-	zoneID    string
-	zoneName  string
-	startTime int64
-	endTime   int64
-	count     int
+	apiKey     string
+	apiEmail   string
+	rayID      string
+	zoneID     string
+	zoneName   string
+	startTime  int64
+	endTime    int64
+	count      int
+	byReceived bool
 }
 
 func (conf *config) Validate() error {
@@ -149,5 +151,9 @@ var flags = []cli.Flag{
 		Name:  "count",
 		Value: 1,
 		Usage: "The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period",
+	},
+	cli.BoolFlag{
+		Name:  "by-received",
+		Usage: "Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.",
 	},
 }
