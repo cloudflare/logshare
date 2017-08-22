@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ type Client struct {
 	apiKey     string
 	apiEmail   string
 	byReceived bool
+	fields     []string
 	httpClient *http.Client
 	dest       io.Writer
 	headers    http.Header
@@ -79,6 +81,10 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		byReceived: byReceived,
 	}
 
+	if options != nil && options.Fields != nil {
+		client.fields = options.Fields
+	}
+
 	return client, nil
 }
 
@@ -89,6 +95,15 @@ func (c *Client) buildURL(zoneID string) string {
 	}
 
 	return fmt.Sprintf("%s/zones/%s/logs/%s", c.endpoint, zoneID, endpoint)
+}
+
+func (c *Client) addFieldParams(url string) string {
+	// The fields param is only supported on the Logpull endpoint
+	if !c.byReceived || len(c.fields) < 1 {
+		return url
+	}
+
+	return url + "&fields=" + strings.Join(c.fields, ",")
 }
 
 // GetFromRayID fetches logs for the given rayID, or starting at the given rayID
@@ -103,6 +118,8 @@ func (c *Client) GetFromRayID(zoneID string, rayID string, end int64, count int)
 	if count > 0 {
 		url += fmt.Sprintf("&count=%d", count)
 	}
+
+	url = c.addFieldParams(url)
 
 	return c.request(url)
 }
@@ -119,6 +136,8 @@ func (c *Client) GetFromTimestamp(zoneID string, start int64, end int64, count i
 	if count > 0 {
 		url += fmt.Sprintf("&count=%d", count)
 	}
+
+	url = c.addFieldParams(url)
 
 	return c.request(url)
 }

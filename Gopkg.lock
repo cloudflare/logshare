@@ -8,12 +8,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  name = "github.com/cloudflare/logshare"
-  packages = ["."]
-  revision = "bb64692cfee10d72020a77e0a523d585877e0ce5"
-  version = "v1.2"
-
-[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -28,6 +22,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e5c7e18d88cc5fa4f21494bc2ba237dd0507d7558f27ffe4b6799743cb2c160"
+  inputs-digest = "4ee081067a98b10df83b03edae70baf62809dfa58bb2ded3402b6fd8ac8fca7f"
   solver-name = "gps-cdcl"
   solver-version = 1
