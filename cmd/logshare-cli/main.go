@@ -48,7 +48,13 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.zoneID = id
 		}
 
-		client, err := logshare.New(conf.apiKey, conf.apiEmail, &logshare.Options{ByReceived: conf.byReceived})
+		client, err := logshare.New(
+			conf.apiKey,
+			conf.apiEmail,
+			&logshare.Options{
+				ByReceived: conf.byReceived,
+				Fields:     conf.fields,
+			})
 		if err != nil {
 			return err
 		}
@@ -88,6 +94,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.endTime = c.Int64("end-time")
 	conf.count = c.Int("count")
 	conf.byReceived = c.Bool("by-received")
+	conf.fields = c.StringSlice("fields")
 
 	return conf.Validate()
 }
@@ -102,11 +109,16 @@ type config struct {
 	endTime    int64
 	count      int
 	byReceived bool
+	fields     []string
 }
 
 func (conf *config) Validate() error {
 	if conf.zoneID == "" && conf.zoneName == "" {
 		return errors.New("zone-name OR zone-id must be set")
+	}
+
+	if len(conf.fields) > 0 && !conf.byReceived {
+		return errors.New("specifying --fields is only supported when using the --by-received endpoint")
 	}
 
 	// if conf.count  -1 || conf.count > 0 {
@@ -155,5 +167,9 @@ var flags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "by-received",
 		Usage: "Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.",
+	},
+	cli.StringSliceFlag{
+		Name:  "fields",
+		Usage: "Select specific fields to retrieve in the log response. Pass a comma-separated list to fields to specify multiple fields.",
 	},
 }
