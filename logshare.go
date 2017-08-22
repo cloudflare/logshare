@@ -39,6 +39,8 @@ type Options struct {
 	Dest io.Writer
 	// Fetch logs by the processing/recieved timestamp
 	ByReceived bool
+	// The fields to return in the log responses
+	Fields []string
 }
 
 // Meta contains data about the API response: the number of logs returned,
