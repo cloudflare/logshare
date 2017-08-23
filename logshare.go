@@ -142,6 +142,12 @@ func (c *Client) GetFromTimestamp(zoneID string, start int64, end int64, count i
 	return c.request(url)
 }
 
+// FetchFieldNames fetches the names of the available log fields.
+func (c *Client) FetchFieldNames(zoneID string) (*Meta, error) {
+	url := fmt.Sprintf("%s/zones/%s/logs/received/fields", c.endpoint, zoneID)
+	return c.request(url)
+}
+
 func (c *Client) request(url string) (*Meta, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
