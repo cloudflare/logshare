@@ -28,12 +28,15 @@ func main() {
 
 	conf := &config{}
 	app.Action = run(conf)
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		log.Println(err)
+	}
 }
 
 func run(conf *config) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
 		if err := parseFlags(conf, c); err != nil {
+			cli.ShowAppHelp(c)
 			return err
 		}
 
@@ -42,6 +45,7 @@ func run(conf *config) func(c *cli.Context) error {
 			cf, err := cloudflare.New(conf.apiKey, conf.apiEmail)
 			id, err := cf.ZoneIDByName(conf.zoneName)
 			if err != nil {
+				cli.ShowAppHelp(c)
 				return errors.Wrap(err, "could not find a zone for the given ID")
 			}
 
@@ -62,7 +66,13 @@ func run(conf *config) func(c *cli.Context) error {
 		// Based on the combination of flags, call against the correct log
 		// endpoint.
 		var meta *logshare.Meta
-		if conf.rayID != "" {
+
+		if conf.listFields {
+			meta, err = client.FetchFieldNames(conf.zoneID)
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch field names")
+			}
+		} else if conf.rayID != "" {
 			meta, err = client.GetFromRayID(
 				conf.zoneID, conf.rayID, conf.endTime, conf.count)
 			if err != nil {
@@ -95,6 +105,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.count = c.Int("count")
 	conf.byReceived = c.Bool("by-received")
 	conf.fields = c.StringSlice("fields")
+	conf.listFields = c.Bool("list-fields")
 
 	return conf.Validate()
 }
@@ -110,6 +121,7 @@ type config struct {
 	count      int
 	byReceived bool
 	fields     []string
+	listFields bool
 }
 
 func (conf *config) Validate() error {
@@ -171,5 +183,9 @@ var flags = []cli.Flag{
 	cli.StringSliceFlag{
 		Name:  "fields",
 		Usage: "Select specific fields to retrieve in the log response. Pass a comma-separated list to fields to specify multiple fields.",
+	},
+	cli.BoolFlag{
+		Name:  "list-fields",
+		Usage: "List the available log fields for use with the --fields flag",
 	},
 }
