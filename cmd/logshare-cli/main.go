@@ -4,9 +4,11 @@ import (
 	"log"
 	"os"
 	"time"
+	s "strings"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
-	"github.com/cloudflare/logshare"
+	//"github.com/cloudflare/logshare"
+	"../.."
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -106,6 +108,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.byReceived = c.Bool("by-received")
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
+	conf.gStrBucket = c.String("google-storage-bucket")
 
 	return conf.Validate()
 }
@@ -122,6 +125,7 @@ type config struct {
 	byReceived bool
 	fields     []string
 	listFields bool
+	gStrBucket string
 }
 
 func (conf *config) Validate() error {
@@ -136,6 +140,10 @@ func (conf *config) Validate() error {
 	// if conf.count  -1 || conf.count > 0 {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
+
+	if !s.HasPrefix(conf.gStrBucket, "gs://") {
+		return errors.New("Google Storage Bucket must begin with \"gs://\"")
+	}
 
 	return nil
 }
@@ -187,5 +195,9 @@ var flags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "list-fields",
 		Usage: "List the available log fields for use with the --fields flag",
+	},
+	cli.StringFlag{
+		Name: "google-storage-bucket",
+		Usage: "Full URI to a Google Cloud Storage Bucket to upload logs to",
 	},
 }
