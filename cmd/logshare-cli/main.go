@@ -129,6 +129,11 @@ type config struct {
 }
 
 func (conf *config) Validate() error {
+
+	if conf.apiKey == "" || conf.apiEmail == "" {
+		return errors.New("Must provide both api-key and api-email")
+	}
+
 	if conf.zoneID == "" && conf.zoneName == "" {
 		return errors.New("zone-name OR zone-id must be set")
 	}
@@ -141,7 +146,7 @@ func (conf *config) Validate() error {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
 
-	if !s.HasPrefix(conf.gStrBucket, "gs://") {
+	if conf.gStrBucket != "" && !s.HasPrefix(conf.gStrBucket, "gs://") {
 		return errors.New("Google Storage Bucket must begin with \"gs://\"")
 	}
 
