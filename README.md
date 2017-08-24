@@ -30,6 +30,10 @@ You can also download pre-built Linux binaries of `logshare-cli` from the
 [Releases](https://github.com/cloudflare/logshare/releases) tab on GitHub for Linux, Windows and macOS (nee OS
 X).
 
+## Setup your API secrets 
+
+You can either pass your API secrets using `--api-key` and `--api-email` or set environment variables `CF_API_KEY` and `CF_API_EMAIL`
+
 ## Support
 
 Please raise an issue on this repository, and include:
