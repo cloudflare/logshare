@@ -122,6 +122,26 @@ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start
  437 "fr"
 ```
 
+#### Client IPs and endpoints that were impacted by rate-limiting rules 
+
+```
+logshare-cli --zone-name example.com --api-key $CF_API_KEY --api-email $CF_API_EMAIL --start-time 1453307871 --count 20000| jq 'select(.edge.rateLimit.processedRules | length > 0)| {ts: .timestamp, ruleID: .edge.rateLimit.processedRules[], url: .clientRequest.uri, srcIP: .client.ip}'
+```
+
+```
+{
+  "ts": 1503002722080000000,
+  "ruleID": {
+    "ruleId": 96612,
+    "ruleSrc": "user",
+    "status": "allow",
+    "ruleType": "ban"
+  },
+  "url": "/download",
+  "srcIP": "45.56.123.254"
+}
+```
+
 ## TODO:
 
 In rough order of importance:
