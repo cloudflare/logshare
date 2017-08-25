@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	//packages for writing to google cloud storage
+	//"cloud.google.com/go/storage"
+	//"golang.org/x/net/context"
 )
 
 const (

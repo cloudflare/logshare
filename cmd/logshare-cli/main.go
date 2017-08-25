@@ -109,6 +109,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
 	conf.gStrBucket = c.String("google-storage-bucket")
+	conf.gProjectId = c.String("google-project-id")
 
 	return conf.Validate()
 }
@@ -126,6 +127,7 @@ type config struct {
 	fields     []string
 	listFields bool
 	gStrBucket string
+	gProjectId string
 }
 
 func (conf *config) Validate() error {
@@ -148,6 +150,10 @@ func (conf *config) Validate() error {
 
 	if conf.gStrBucket != "" && !s.HasPrefix(conf.gStrBucket, "gs://") {
 		return errors.New("Google Storage Bucket must begin with \"gs://\"")
+	}
+
+	if (conf.gStrBucket != "" && conf.gProjectId == "") || (conf.gStrBucket == "" && conf.gProjectId != "") {
+		return errors.New("Google Storage Bucket and Google Project ID must be provided to upload to Google Storage")
 	}
 
 	return nil
@@ -204,5 +210,9 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name: "google-storage-bucket",
 		Usage: "Full URI to a Google Cloud Storage Bucket to upload logs to",
+	},
+	cli.StringFlag{
+		Name: "google-project-id",
+		Usage: "Project ID of the Google Cloud Storage Bucket to upload logs to",
 	},
 }
