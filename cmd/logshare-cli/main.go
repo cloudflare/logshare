@@ -95,10 +95,6 @@ func run(conf *config) func(c *cli.Context) error {
 				ByReceived: conf.byReceived,
 				Fields:     conf.fields,
 				Dest: 	    gWriter,
-				//GStoreOptions: logshare.GStore{
-				//	Bucket: conf.gStrBucket,
-				//	ProjectID: conf.gProjectId,
-				//},
 			})
 		if err != nil {
 			return err
@@ -186,10 +182,6 @@ func (conf *config) Validate() error {
 	// if conf.count  -1 || conf.count > 0 {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
-
-	//if conf.gStrBucket != "" && !s.HasPrefix(conf.gStrBucket, "gs://") {
-	//	return errors.New("Google Storage Bucket must begin with \"gs://\"")
-	//}
 
 	if (conf.googleStorageBucket != "" && conf.googleProjectId == "") || 
 	   (conf.googleStorageBucket == "" && conf.googleProjectId != "") {
