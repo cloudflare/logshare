@@ -5,12 +5,16 @@ import (
 	"os"
 	"time"
 	s "strings"
+	"strconv"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	//"github.com/cloudflare/logshare"
 	"../.."
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	//packages for writing to google cloud storage
+        gStr "cloud.google.com/go/storage"
+        "golang.org/x/net/context"
 )
 
 // Rev is set on build time and should contain the git commit logshare-cli
@@ -35,6 +39,28 @@ func main() {
 	}
 }
 
+func setupGoogleStr(projectId string, bucketName string, filename string) (*gStr.Writer, error) {
+        gCtx := context.Background()
+  
+        gClient, error := gStr.NewClient(gCtx)
+        if error != nil {
+        	return nil, error
+	}
+ 
+        gBucket := gClient.Bucket(bucketName)
+
+        if error = gBucket.Create(gCtx, projectId, nil); s.Contains(error.Error(),"409") {
+		log.Printf("Bucket %v already exists.\n", bucketName)
+		error = nil
+        } else if error != nil {
+        	return nil, error
+	}
+
+        obj := gBucket.Object(filename)
+        return obj.NewWriter(gCtx), error
+}
+
+
 func run(conf *config) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
 		if err := parseFlags(conf, c); err != nil {
@@ -53,13 +79,26 @@ func run(conf *config) func(c *cli.Context) error {
 
 			conf.zoneID = id
 		}
+ 		
+		fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
+		gWriter, err := setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
+		if err != nil {
+			return err
+		}
+		defer gWriter.Close()
+		
 		client, err := logshare.New(
 			conf.apiKey,
 			conf.apiEmail,
 			&logshare.Options{
 				ByReceived: conf.byReceived,
 				Fields:     conf.fields,
+				Dest: 	    gWriter,
+				//GStoreOptions: logshare.GStore{
+				//	Bucket: conf.gStrBucket,
+				//	ProjectID: conf.gProjectId,
+				//},
 			})
 		if err != nil {
 			return err
@@ -108,8 +147,8 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.byReceived = c.Bool("by-received")
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
-	conf.gStrBucket = c.String("google-storage-bucket")
-	conf.gProjectId = c.String("google-project-id")
+	conf.googleStorageBucket = c.String("google-storage-bucket")
+	conf.googleProjectId = c.String("google-project-id")
 
 	return conf.Validate()
 }
@@ -126,8 +165,8 @@ type config struct {
 	byReceived bool
 	fields     []string
 	listFields bool
-	gStrBucket string
-	gProjectId string
+	googleStorageBucket string
+	googleProjectId string
 }
 
 func (conf *config) Validate() error {
@@ -148,11 +187,12 @@ func (conf *config) Validate() error {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
 
-	if conf.gStrBucket != "" && !s.HasPrefix(conf.gStrBucket, "gs://") {
-		return errors.New("Google Storage Bucket must begin with \"gs://\"")
-	}
+	//if conf.gStrBucket != "" && !s.HasPrefix(conf.gStrBucket, "gs://") {
+	//	return errors.New("Google Storage Bucket must begin with \"gs://\"")
+	//}
 
-	if (conf.gStrBucket != "" && conf.gProjectId == "") || (conf.gStrBucket == "" && conf.gProjectId != "") {
+	if (conf.googleStorageBucket != "" && conf.googleProjectId == "") || 
+	   (conf.googleStorageBucket == "" && conf.googleProjectId != "") {
 		return errors.New("Google Storage Bucket and Google Project ID must be provided to upload to Google Storage")
 	}
 

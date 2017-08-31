@@ -10,9 +10,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	//packages for writing to google cloud storage
-	//"cloud.google.com/go/storage"
-	//"golang.org/x/net/context"
 )
 
 const (
@@ -34,6 +31,13 @@ type Client struct {
 	headers    http.Header
 }
 
+//type GStore struct {
+//	// bucket to write logs to
+//	Bucket string
+//	// project to create bucket in
+//	ProjectID string
+//}
+
 // Options for configuring log retrieval requests.
 type Options struct {
 	// Provide a custom HTTP client. Defaults to a barebones *http.Client.
@@ -46,6 +50,8 @@ type Options struct {
 	ByReceived bool
 	// The fields to return in the log responses
 	Fields []string
+	// Google Storage options
+//	GStoreOptions GStore
 }
 
 // Meta contains data about the API response: the number of logs returned,
@@ -86,6 +92,10 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 
 	if options != nil && options.Fields != nil {
 		client.fields = options.Fields
+	}
+
+	if options != nil && options.Dest != nil {
+		client.dest = options.Dest
 	}
 
 	return client, nil
