@@ -10,9 +10,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	//packages for writing to google cloud storage
-	//"cloud.google.com/go/storage"
-	//"golang.org/x/net/context"
 )
 
 const (
@@ -86,6 +83,10 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 
 	if options != nil && options.Fields != nil {
 		client.fields = options.Fields
+	}
+
+	if options != nil && options.Dest != nil {
+		client.dest = options.Dest
 	}
 
 	return client, nil
