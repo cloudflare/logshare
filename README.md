@@ -58,16 +58,19 @@ COMMANDS:
      help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --api-key value     Your Cloudflare API key
-   --api-email value   The email address associated with your Cloudflare API key and account
-   --zone-id value     The zone ID of the zone you are requesting logs for
-   --zone-name value   The name of the zone you are requesting logs for. logshare will automatically fetch the ID of this zone from the Cloudflare API
-   --ray-id value      The ray ID to request logs from (instead of a timestamp)
-   --start-time value  The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1475575998)
-   --end-time value    The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1475576598)
-   --count value       The number (count) of logs to retrieve (default: 1)
-   --help, -h          show help
-   --version, -v       print the version
+   --api-key value                Your Cloudflare API key
+   --api-email value              The email address associated with your Cloudflare API key and account
+   --zone-id value                The zone ID of the zone you are requesting logs for
+   --zone-name value              The name of the zone you are requesting logs for. logshare will automatically fetch the ID of this zone from the Cloudflare API
+   --ray-id value                 The ray ID to request logs from (instead of a timestamp)
+   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1504137645)
+   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1504138245)
+   --count value                  The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period (default: 1)
+   --by-received                  Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.
+   --fields value                 Select specific fields to retrieve in the log response. Pass a comma-separated list to fields to specify multiple fields.
+   --list-fields                  List the available log fields for use with the --fields flag
+   --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
+   --google-project-id value      Project ID of the Google Cloud Storage Bucket to upload logs to
 ```
 
 Typically you will need the zone ID from the Cloudflare API to retrieve logs from the ELS REST API.
@@ -141,6 +144,19 @@ logshare-cli --zone-name example.com --api-key $CF_API_KEY --api-email $CF_API_E
   "srcIP": "45.56.123.254"
 }
 ```
+
+#### Uploading ELS Logs to Google Cloud Storage (GCS)
+
+`logshare-cli` can be used to upload logs directly to GCS. In order to do so both `--google-storage-bucket` and `--google-project-id` must be provided. This will reroute log output to a file named `cloudflare_els_<zone-id>_<unix-ts>.json` in the bucket/project selected. The bucket will be created if it was not already, but the project must already exist.
+
+```
+logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time 1502438905 
+--count 500 --google-storage-bucket=my-bucket --google-project-id=my-project-id
+```
+
+###### Dependencies to upload to GCS
+
+The [Google Cloud SDK](https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-go) must be installed including the `beta` component along with the go library. [Google Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials) should be enabled so that logshare does not need credential access to talk to GCS.
 
 ## TODO:
 
