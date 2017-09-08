@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -77,16 +78,16 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.zoneID = id
 		}
 
-		var gcsWriter *gcs.Writer
-		var err error
+		var outputWriter io.Writer
 		if conf.googleStorageBucket != "" {
 			fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
-			gcsWriter, err = setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
+			gcsWriter, err := setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
 			if err != nil {
 				return err
 			}
 			defer gcsWriter.Close()
+			outputWriter = gcsWriter
 		}
 
 		client, err := logshare.New(
@@ -95,7 +96,7 @@ func run(conf *config) func(c *cli.Context) error {
 			&logshare.Options{
 				ByReceived: conf.byReceived,
 				Fields:     conf.fields,
-				Dest:       gcsWriter,
+				Dest:       outputWriter,
 			})
 		if err != nil {
 			return err
