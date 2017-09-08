@@ -3,17 +3,16 @@ package main
 import (
 	"log"
 	"os"
-	"time"
-	s "strings"
 	"strconv"
+	"strings"
+	"time"
 
+	gcs "cloud.google.com/go/storage"
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/cloudflare/logshare"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	//packages for writing to google cloud storage
-        gStr "cloud.google.com/go/storage"
-        "golang.org/x/net/context"
+	"golang.org/x/net/context"
 )
 
 // Rev is set on build time and should contain the git commit logshare-cli
@@ -38,27 +37,26 @@ func main() {
 	}
 }
 
-func setupGoogleStr(projectId string, bucketName string, filename string) (*gStr.Writer, error) {
-        gCtx := context.Background()
-  
-        gClient, error := gStr.NewClient(gCtx)
-        if error != nil {
-        	return nil, error
-	}
- 
-        gBucket := gClient.Bucket(bucketName)
+func setupGoogleStr(projectId string, bucketName string, filename string) (*gcs.Writer, error) {
+	gCtx := context.Background()
 
-        if error = gBucket.Create(gCtx, projectId, nil); s.Contains(error.Error(),"409") {
+	gClient, error := gcs.NewClient(gCtx)
+	if error != nil {
+		return nil, error
+	}
+
+	gBucket := gClient.Bucket(bucketName)
+
+	if error = gBucket.Create(gCtx, projectId, nil); strings.Contains(error.Error(), "409") {
 		log.Printf("Bucket %v already exists.\n", bucketName)
 		error = nil
-        } else if error != nil {
-        	return nil, error
+	} else if error != nil {
+		return nil, error
 	}
 
-        obj := gBucket.Object(filename)
-        return obj.NewWriter(gCtx), error
+	obj := gBucket.Object(filename)
+	return obj.NewWriter(gCtx), error
 }
-
 
 func run(conf *config) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
@@ -78,7 +76,7 @@ func run(conf *config) func(c *cli.Context) error {
 
 			conf.zoneID = id
 		}
- 		
+
 		fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
 		gWriter, err := setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
@@ -86,14 +84,14 @@ func run(conf *config) func(c *cli.Context) error {
 			return err
 		}
 		defer gWriter.Close()
-		
+
 		client, err := logshare.New(
 			conf.apiKey,
 			conf.apiEmail,
 			&logshare.Options{
 				ByReceived: conf.byReceived,
 				Fields:     conf.fields,
-				Dest: 	    gWriter,
+				Dest:       gWriter,
 			})
 		if err != nil {
 			return err
@@ -149,19 +147,19 @@ func parseFlags(conf *config, c *cli.Context) error {
 }
 
 type config struct {
-	apiKey     string
-	apiEmail   string
-	rayID      string
-	zoneID     string
-	zoneName   string
-	startTime  int64
-	endTime    int64
-	count      int
-	byReceived bool
-	fields     []string
-	listFields bool
+	apiKey              string
+	apiEmail            string
+	rayID               string
+	zoneID              string
+	zoneName            string
+	startTime           int64
+	endTime             int64
+	count               int
+	byReceived          bool
+	fields              []string
+	listFields          bool
 	googleStorageBucket string
-	googleProjectId string
+	googleProjectId     string
 }
 
 func (conf *config) Validate() error {
@@ -182,9 +180,8 @@ func (conf *config) Validate() error {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
 
-	if (conf.googleStorageBucket != "" && conf.googleProjectId == "") || 
-	   (conf.googleStorageBucket == "" && conf.googleProjectId != "") {
-		return errors.New("Google Storage Bucket and Google Project ID must be provided to upload to Google Storage")
+	if (conf.googleStorageBucket == "") != (conf.googleProjectId == "") {
+		return errors.New("Both google-storage-bucket and google-project-id must be provided to upload to Google Storage")
 	}
 
 	return nil
@@ -239,11 +236,11 @@ var flags = []cli.Flag{
 		Usage: "List the available log fields for use with the --fields flag",
 	},
 	cli.StringFlag{
-		Name: "google-storage-bucket",
+		Name:  "google-storage-bucket",
 		Usage: "Full URI to a Google Cloud Storage Bucket to upload logs to",
 	},
 	cli.StringFlag{
-		Name: "google-project-id",
+		Name:  "google-project-id",
 		Usage: "Project ID of the Google Cloud Storage Bucket to upload logs to",
 	},
 }
