@@ -8,8 +8,7 @@ import (
 	"strconv"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
-	//"github.com/cloudflare/logshare"
-	"../.."
+	"github.com/cloudflare/logshare"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	//packages for writing to google cloud storage
