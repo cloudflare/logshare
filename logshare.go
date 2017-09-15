@@ -215,8 +215,6 @@ func streamLogs(r io.Reader, w io.Writer) (int, error) {
 		count++
 	}
 
-	w.Write([]byte("\n"))
-
 	if err := scanner.Err(); err != nil {
 		return count, errors.Wrap(err, "reading response:")
 	}
