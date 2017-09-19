@@ -1,14 +1,19 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
+	gcs "cloud.google.com/go/storage"
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/cloudflare/logshare"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"golang.org/x/net/context"
 )
 
 // Rev is set on build time and should contain the git commit logshare-cli
@@ -33,6 +38,27 @@ func main() {
 	}
 }
 
+func setupGoogleStr(projectId string, bucketName string, filename string) (*gcs.Writer, error) {
+	gCtx := context.Background()
+
+	gClient, error := gcs.NewClient(gCtx)
+	if error != nil {
+		return nil, error
+	}
+
+	gBucket := gClient.Bucket(bucketName)
+
+	if error = gBucket.Create(gCtx, projectId, nil); strings.Contains(error.Error(), "409") {
+		log.Printf("Bucket %v already exists.\n", bucketName)
+		error = nil
+	} else if error != nil {
+		return nil, error
+	}
+
+	obj := gBucket.Object(filename)
+	return obj.NewWriter(gCtx), error
+}
+
 func run(conf *config) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
 		if err := parseFlags(conf, c); err != nil {
@@ -52,12 +78,25 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.zoneID = id
 		}
 
+		var outputWriter io.Writer
+		if conf.googleStorageBucket != "" {
+			fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
+
+			gcsWriter, err := setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
+			if err != nil {
+				return err
+			}
+			defer gcsWriter.Close()
+			outputWriter = gcsWriter
+		}
+
 		client, err := logshare.New(
 			conf.apiKey,
 			conf.apiEmail,
 			&logshare.Options{
 				ByReceived: conf.byReceived,
 				Fields:     conf.fields,
+				Dest:       outputWriter,
 			})
 		if err != nil {
 			return err
@@ -106,25 +145,34 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.byReceived = c.Bool("by-received")
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
+	conf.googleStorageBucket = c.String("google-storage-bucket")
+	conf.googleProjectId = c.String("google-project-id")
 
 	return conf.Validate()
 }
 
 type config struct {
-	apiKey     string
-	apiEmail   string
-	rayID      string
-	zoneID     string
-	zoneName   string
-	startTime  int64
-	endTime    int64
-	count      int
-	byReceived bool
-	fields     []string
-	listFields bool
+	apiKey              string
+	apiEmail            string
+	rayID               string
+	zoneID              string
+	zoneName            string
+	startTime           int64
+	endTime             int64
+	count               int
+	byReceived          bool
+	fields              []string
+	listFields          bool
+	googleStorageBucket string
+	googleProjectId     string
 }
 
 func (conf *config) Validate() error {
+
+	if conf.apiKey == "" || conf.apiEmail == "" {
+		return errors.New("Must provide both api-key and api-email")
+	}
+
 	if conf.zoneID == "" && conf.zoneName == "" {
 		return errors.New("zone-name OR zone-id must be set")
 	}
@@ -136,6 +184,10 @@ func (conf *config) Validate() error {
 	// if conf.count  -1 || conf.count > 0 {
 	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
 	// }
+
+	if (conf.googleStorageBucket == "") != (conf.googleProjectId == "") {
+		return errors.New("Both google-storage-bucket and google-project-id must be provided to upload to Google Storage")
+	}
 
 	return nil
 }
@@ -187,5 +239,13 @@ var flags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "list-fields",
 		Usage: "List the available log fields for use with the --fields flag",
+	},
+	cli.StringFlag{
+		Name:  "google-storage-bucket",
+		Usage: "Full URI to a Google Cloud Storage Bucket to upload logs to",
+	},
+	cli.StringFlag{
+		Name:  "google-project-id",
+		Usage: "Project ID of the Google Cloud Storage Bucket to upload logs to",
 	},
 }

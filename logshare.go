@@ -85,6 +85,10 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		client.fields = options.Fields
 	}
 
+	if options != nil && options.Dest != nil {
+		client.dest = options.Dest
+	}
+
 	return client, nil
 }
 
@@ -210,8 +214,6 @@ func streamLogs(r io.Reader, w io.Writer) (int, error) {
 		w.Write([]byte("\n"))
 		count++
 	}
-
-	w.Write([]byte("\n"))
 
 	if err := scanner.Err(); err != nil {
 		return count, errors.Wrap(err, "reading response:")
