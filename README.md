@@ -63,14 +63,17 @@ GLOBAL OPTIONS:
    --zone-id value                The zone ID of the zone you are requesting logs for
    --zone-name value              The name of the zone you are requesting logs for. logshare will automatically fetch the ID of this zone from the Cloudflare API
    --ray-id value                 The ray ID to request logs from (instead of a timestamp)
-   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1504137645)
-   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1504138245)
+   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1511219860)
+   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1511220460)
    --count value                  The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period (default: 1)
-   --by-received                  Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.
+   --by-received                  (default behaviour) Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.
+   --legacy-endpoint              (deprecated) Retrieve logs using the 'legacy' endpoint, where results are returned by log timestamp.
    --fields value                 Select specific fields to retrieve in the log response. Pass a comma-separated list to fields to specify multiple fields.
    --list-fields                  List the available log fields for use with the --fields flag
    --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
    --google-project-id value      Project ID of the Google Cloud Storage Bucket to upload logs to
+   --help, -h                     show help
+   --version, -v                  print the version
 ```
 
 Typically you will need the zone ID from the Cloudflare API to retrieve logs from the ELS REST API.
@@ -85,10 +88,10 @@ Although `logshare-cli` can be used in multiple ways, and for ingesting logs int
 common use-case is ad-hoc analysis of logs when troubleshooting or analyzing traffic. Here are a few examples that
 leverage [`jq`](https://stedolan.github.io/jq/) to parse log output.
 
-#### Distribution of Origin Response Status Codes
+#### Distribution of Edge (client-facing) Response Status Codes
 
 ```
-$ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871 --count=20000 | jq '.[] | .originResponse.status // empty' | sort -rn | uniq -c | sort -rn
+$ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871 --count=20000 | jq '.[] | .EdgeResponseStatus empty' | sort -rn | uniq -c | sort -rn
 ```
 ```
 35954 200
@@ -106,42 +109,48 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --sta
    1 405
 ```
 
-#### Top 10 Visitor Countries
+#### List Available Log Fields
 
 ```
-logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871
---count=20000 | jq '. | .client.country' | uniq -c | sort -rn | head -n 10
+$ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --list-fields | jq
 ```
-```
-39384 "us"
-1276 "de"
- 933 "ie"
- 743 "gb"
- 597 "ca"
- 587 "in"
- 528 "id"
- 476 "au"
- 464 "jp"
- 437 "fr"
-```
-
-#### Client IPs and endpoints that were impacted by rate-limiting rules 
-
-```
-logshare-cli --zone-name example.com --api-key $CF_API_KEY --api-email $CF_API_EMAIL --start-time 1453307871 --count 20000| jq 'select(.edge.rateLimit.processedRules | length > 0)| {ts: .timestamp, ruleID: .edge.rateLimit.processedRules[], url: .clientRequest.uri, srcIP: .client.ip}'
-```
-
 ```
 {
-  "ts": 1503002722080000000,
-  "ruleID": {
-    "ruleId": 96612,
-    "ruleSrc": "user",
-    "status": "allow",
-    "ruleType": "ban"
-  },
-  "url": "/download",
-  "srcIP": "45.56.123.254"
+  "CacheCacheStatus": "unknown | miss | expired | updating | stale | hit | ignored | bypass | revalidated",
+  "CacheResponseBytes": "Number of bytes returned by the cache",
+  "CacheResponseStatus": "HTTP status code returned by the cache to the edge: all requests (including non-cacheable ones) go through the cache: also see CacheStatus field",
+  "ClientASN": "Client AS number",
+  "ClientCountry": "Country of the client IP address",
+  "ClientDeviceType": "Client device type",
+  "ClientIP": "IP address of the client",
+  "ClientIPClass": "Client IP class",
+  "ClientRequestBytes": "Number of bytes in the client request",
+  "ClientRequestHost": "Host requested by the client",
+  "ClientRequestMethod": "HTTP method of client request",
+  "ClientRequestProtocol": "HTTP protocol of client request",
+  "ClientRequestReferer": "HTTP request referrer",
+  "ClientRequestURI": "URI requested by the client",
+  "ClientRequestUserAgent": "User agent reported by the client",
+  "ClientSSLCipher": "Client SSL cipher",
+  "ClientSSLProtocol": "Client SSL protocol",
+  "ClientSrcPort": "Client source port",
+  "EdgeColoID": "Cloudflare edge colo id",
+  "EdgeEndTimestamp": "Unix nanosecond timestamp the edge finished sending response to the client",
+  "EdgePathingStatus": "Edge pathing status",
+  "EdgeResponseBytes": "Number of bytes returned by the edge to the client",
+  "EdgeResponseCompressionRatio": "Edge response compression ratio",
+  "EdgeResponseStatus": "HTTP status code returned by Cloudflare to the client",
+  "EdgeStartTimestamp": "Unix nanosecond timestamp the edge received request from the client",
+  "OriginIP": "IP of the origin server",
+  "OriginResponseBytes": "Number of bytes returned by the origin server",
+  "OriginResponseHTTPExpires": "Value of the origin 'expires' header in RFC1123 format",
+  "OriginResponseHTTPLastModified": "Value of the origin 'last-modified' header in RFC1123 format",
+  "OriginResponseStatus": "Status returned by the origin server",
+  "OriginResponseTime": "Number of nanoseconds it took the origin to return the response to edge",
+  "RayID": "Ray ID of the request",
+  "WAFAction": "Action taken by the WAF, if triggered",
+  "WAFRuleID": "ID of the applied WAF rule",
+  "ZoneID": "Internal zone ID"
 }
 ```
 

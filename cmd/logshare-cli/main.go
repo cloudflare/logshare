@@ -94,7 +94,8 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.apiKey,
 			conf.apiEmail,
 			&logshare.Options{
-				ByReceived: conf.byReceived,
+				// Pass the inverse of the legacy flag to invoke the old behaviour.
+				ByReceived: !conf.legacy,
 				Fields:     conf.fields,
 				Dest:       outputWriter,
 			})
@@ -143,6 +144,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.endTime = c.Int64("end-time")
 	conf.count = c.Int("count")
 	conf.byReceived = c.Bool("by-received")
+	conf.legacy = c.Bool("legacy-endpoint")
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
 	conf.googleStorageBucket = c.String("google-storage-bucket")
@@ -161,6 +163,7 @@ type config struct {
 	endTime             int64
 	count               int
 	byReceived          bool
+	legacy              bool
 	fields              []string
 	listFields          bool
 	googleStorageBucket string
@@ -177,13 +180,13 @@ func (conf *config) Validate() error {
 		return errors.New("zone-name OR zone-id must be set")
 	}
 
+	if conf.legacy && conf.byReceived {
+		return errors.New("you must specify either --legacy-endpoint or --by-received (the default), not both. The default mode is --by-received")
+	}
+
 	if len(conf.fields) > 0 && !conf.byReceived {
 		return errors.New("specifying --fields is only supported when using the --by-received endpoint")
 	}
-
-	// if conf.count  -1 || conf.count > 0 {
-	// 	return errors.New("count must be > 0, or set to -1 (no limit)")
-	// }
 
 	if (conf.googleStorageBucket == "") != (conf.googleProjectId == "") {
 		return errors.New("Both google-storage-bucket and google-project-id must be provided to upload to Google Storage")
@@ -230,7 +233,11 @@ var flags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "by-received",
-		Usage: "Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.",
+		Usage: "(default behaviour) Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.",
+	},
+	cli.BoolFlag{
+		Name:  "legacy-endpoint",
+		Usage: "(deprecated) Retrieve logs using the 'legacy' endpoint, where results are returned by log timestamp.",
 	},
 	cli.StringSliceFlag{
 		Name:  "fields",
