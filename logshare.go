@@ -39,7 +39,7 @@ type Options struct {
 	Headers http.Header
 	// Destination to stream logs to.
 	Dest io.Writer
-	// Fetch logs by the processing/recieved timestamp
+	// Fetch logs by the processing/received timestamp
 	ByReceived bool
 	// The fields to return in the log responses
 	Fields []string
