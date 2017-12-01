@@ -1,5 +1,8 @@
 # logshare
 
+[![Build Status](https://travis-ci.org/cloudflare/logshare.svg?branch=master)](https://travis-ci.org/cloudflare/logshare)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cloudflare/logshare)](https://goreportcard.com/report/github.com/cloudflare/logshare)
+
 logshare is a client library for Cloudflare's Enterprise Log Share (ELS) REST
 API. ELS allows Cloudflare customers to:
 
