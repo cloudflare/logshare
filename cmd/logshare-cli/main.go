@@ -152,13 +152,13 @@ func run(runCtx *RunContext) func(c *cli.Context) error {
 			}
 
 			defer writer.Close()
-
 			if conf.awsS3Compress {
-				outputWriter = gzip.NewWriter(writer)
+				gzWriter := gzip.NewWriter(writer)
+				defer gzWriter.Close()
+				outputWriter = gzWriter
 			} else {
 				outputWriter = writer
 			}
-
 		}
 
 		client, err := logshare.New(
