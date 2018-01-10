@@ -38,7 +38,7 @@ func main() {
 	}
 }
 
-func setupGoogleStr(projectId string, bucketName string, filename string) (*gcs.Writer, error) {
+func setupGoogleStr(projectID string, bucketName string, filename string) (*gcs.Writer, error) {
 	gCtx := context.Background()
 
 	gClient, error := gcs.NewClient(gCtx)
@@ -48,7 +48,7 @@ func setupGoogleStr(projectId string, bucketName string, filename string) (*gcs.
 
 	gBucket := gClient.Bucket(bucketName)
 
-	if error = gBucket.Create(gCtx, projectId, nil); strings.Contains(error.Error(), "409") {
+	if error = gBucket.Create(gCtx, projectID, nil); strings.Contains(error.Error(), "409") {
 		log.Printf("Bucket %v already exists.\n", bucketName)
 		error = nil
 	} else if error != nil {
@@ -82,7 +82,7 @@ func run(conf *config) func(c *cli.Context) error {
 		if conf.googleStorageBucket != "" {
 			fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
-			gcsWriter, err := setupGoogleStr(conf.googleProjectId, conf.googleStorageBucket, fileName)
+			gcsWriter, err := setupGoogleStr(conf.googleProjectID, conf.googleStorageBucket, fileName)
 			if err != nil {
 				return err
 			}
@@ -94,10 +94,11 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.apiKey,
 			conf.apiEmail,
 			&logshare.Options{
-				// Pass the inverse of the legacy flag to invoke the old behaviour.
-				ByReceived: !conf.legacy,
-				Fields:     conf.fields,
-				Dest:       outputWriter,
+				Fields:          conf.fields,
+				Dest:            outputWriter,
+				ByReceived:      true,
+				Sample:          conf.sample,
+				TimestampFormat: conf.timestampFormat,
 			})
 		if err != nil {
 			return err
@@ -111,12 +112,6 @@ func run(conf *config) func(c *cli.Context) error {
 			meta, err = client.FetchFieldNames(conf.zoneID)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch field names")
-			}
-		} else if conf.rayID != "" {
-			meta, err = client.GetFromRayID(
-				conf.zoneID, conf.rayID, conf.endTime, conf.count)
-			if err != nil {
-				return errors.Wrap(err, "failed to fetch via rayID")
 			}
 		} else {
 			meta, err = client.GetFromTimestamp(
@@ -139,16 +134,15 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.apiEmail = c.String("api-email")
 	conf.zoneID = c.String("zone-id")
 	conf.zoneName = c.String("zone-name")
-	conf.rayID = c.String("ray-id")
 	conf.startTime = c.Int64("start-time")
 	conf.endTime = c.Int64("end-time")
 	conf.count = c.Int("count")
-	conf.byReceived = c.Bool("by-received")
-	conf.legacy = c.Bool("legacy-endpoint")
+	conf.timestampFormat = c.String("timestamp-format")
+	conf.sample = c.Float64("sample")
 	conf.fields = c.StringSlice("fields")
 	conf.listFields = c.Bool("list-fields")
 	conf.googleStorageBucket = c.String("google-storage-bucket")
-	conf.googleProjectId = c.String("google-project-id")
+	conf.googleProjectID = c.String("google-project-id")
 
 	return conf.Validate()
 }
@@ -156,18 +150,17 @@ func parseFlags(conf *config, c *cli.Context) error {
 type config struct {
 	apiKey              string
 	apiEmail            string
-	rayID               string
 	zoneID              string
 	zoneName            string
 	startTime           int64
 	endTime             int64
 	count               int
-	byReceived          bool
-	legacy              bool
+	timestampFormat     string
+	sample              float64
 	fields              []string
 	listFields          bool
 	googleStorageBucket string
-	googleProjectId     string
+	googleProjectID     string
 }
 
 func (conf *config) Validate() error {
@@ -180,15 +173,11 @@ func (conf *config) Validate() error {
 		return errors.New("zone-name OR zone-id must be set")
 	}
 
-	if conf.legacy && conf.byReceived {
-		return errors.New("you must specify either --legacy-endpoint or --by-received (the default), not both. The default mode is --by-received")
+	if conf.sample != 0.0 && (conf.sample < 0.1 || conf.sample > 0.9) {
+		return errors.New("sample must be between 0.1 and 0.9")
 	}
 
-	if len(conf.fields) > 0 && !conf.byReceived {
-		return errors.New("specifying --fields is only supported when using the --by-received endpoint")
-	}
-
-	if (conf.googleStorageBucket == "") != (conf.googleProjectId == "") {
+	if (conf.googleStorageBucket == "") != (conf.googleProjectID == "") {
 		return errors.New("Both google-storage-bucket and google-project-id must be provided to upload to Google Storage")
 	}
 
@@ -231,13 +220,15 @@ var flags = []cli.Flag{
 		Value: 1,
 		Usage: "The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period",
 	},
-	cli.BoolFlag{
-		Name:  "by-received",
-		Usage: "(default behaviour) Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.",
+	cli.Float64Flag{
+		Name:  "sample",
+		Value: 0.0,
+		Usage: "The sampling rate from 0.1 (10%) to 0.9 (90%) to use when retrieving logs",
 	},
-	cli.BoolFlag{
-		Name:  "legacy-endpoint",
-		Usage: "(deprecated) Retrieve logs using the 'legacy' endpoint, where results are returned by log timestamp.",
+	cli.StringFlag{
+		Name:  "timestamp-format",
+		Value: "unixnano",
+		Usage: "The timestamp format to use in logs: one of 'unix', 'unixnano', or 'rfc3339'",
 	},
 	cli.StringSliceFlag{
 		Name:  "fields",

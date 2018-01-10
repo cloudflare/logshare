@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,17 +20,25 @@ const (
 	byReceived = "received"
 )
 
+const (
+	unix     = "unix"
+	unixNano = "unixnano"
+	rfc3339  = "rfc3339"
+)
+
 // Client holds the current API credentials & HTTP client configuration. Client
 // should not be modified concurrently.
 type Client struct {
-	endpoint   string
-	apiKey     string
-	apiEmail   string
-	byReceived bool
-	fields     []string
-	httpClient *http.Client
-	dest       io.Writer
-	headers    http.Header
+	endpoint        string
+	apiKey          string
+	apiEmail        string
+	byReceived      bool
+	sample          float64
+	timestampFormat string
+	fields          []string
+	httpClient      *http.Client
+	dest            io.Writer
+	headers         http.Header
 }
 
 // Options for configuring log retrieval requests.
@@ -41,6 +51,10 @@ type Options struct {
 	Dest io.Writer
 	// Fetch logs by the processing/received timestamp
 	ByReceived bool
+	// Which timestamp format to use: one of "unix", "unixnano", "rfc3339"
+	TimestampFormat string
+	// Whether to only retrieve a sample of logs (0.1 to 0.9)
+	Sample float64
 	// The fields to return in the log responses
 	Fields []string
 }
@@ -66,7 +80,8 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		return nil, errors.New("apiEmail cannot be empty")
 	}
 
-	var byReceived bool
+	// Default to the received endpoint.
+	var byReceived = true
 	if options != nil {
 		byReceived = options.ByReceived
 	}
@@ -81,79 +96,94 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		byReceived: byReceived,
 	}
 
-	if options != nil && options.Fields != nil {
-		client.fields = options.Fields
-	}
+	if options != nil {
+		client.timestampFormat = options.TimestampFormat
+		client.sample = options.Sample
 
-	if options != nil && options.Dest != nil {
-		client.dest = options.Dest
+		if options.Dest != nil {
+			client.dest = options.Dest
+		}
+
+		if options.Fields != nil {
+			client.fields = options.Fields
+		}
 	}
 
 	return client, nil
 }
 
-func (c *Client) buildURL(zoneID string) string {
-	endpoint := byRequest
-	if c.byReceived {
-		endpoint = byReceived
+func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
+	endpoint := byReceived
+	if !c.byReceived {
+		endpoint = byRequest
 	}
 
-	return fmt.Sprintf("%s/zones/%s/logs/%s", c.endpoint, zoneID, endpoint)
-}
-
-func (c *Client) addFieldParams(url string) string {
-	// The fields param is only supported on the Logpull endpoint
-	if !c.byReceived || len(c.fields) < 1 {
-		return url
+	u, err := url.Parse(
+		fmt.Sprintf("%s/zones/%s/logs/%s",
+			c.endpoint,
+			zoneID,
+			endpoint,
+		),
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	return url + "&fields=" + strings.Join(c.fields, ",")
-}
-
-// GetFromRayID fetches logs for the given rayID, or starting at the given rayID
-// if a non-zero end timestamp is provided.
-func (c *Client) GetFromRayID(zoneID string, rayID string, end int64, count int) (*Meta, error) {
-	url := fmt.Sprintf("%s?start_id=%s", c.buildURL(zoneID), rayID)
-
-	if end > 0 {
-		url += fmt.Sprintf("&end=%d", end)
+	if c.byReceived && len(c.fields) > 1 {
+		params.Set("fields", strings.Join(c.fields, ","))
 	}
 
-	if count > 0 {
-		url += fmt.Sprintf("&count=%d", count)
+	if c.sample != 0.0 {
+		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 1, 64))
 	}
 
-	url = c.addFieldParams(url)
+	if c.timestampFormat != "" {
+		params.Set("timestamps", c.timestampFormat)
+	}
 
-	return c.request(url)
+	u.RawQuery = params.Encode()
+	return u, nil
 }
 
 // GetFromTimestamp fetches logs between the start and end timestamps provided,
 // (up to 'count' logs).
 func (c *Client) GetFromTimestamp(zoneID string, start int64, end int64, count int) (*Meta, error) {
-	url := fmt.Sprintf("%s?start=%d", c.buildURL(zoneID), start)
+	params := url.Values{}
+	params.Set("start", strconv.FormatInt(start, 10))
 
 	if end > 0 {
-		url += fmt.Sprintf("&end=%d", end)
+		params.Set("end", strconv.FormatInt(end, 10))
 	}
 
 	if count > 0 {
-		url += fmt.Sprintf("&count=%d", count)
+		params.Set("count", strconv.Itoa(count))
 	}
 
-	url = c.addFieldParams(url)
+	u, err := c.buildURL(zoneID, params)
+	if err != nil {
+		return nil, err
+	}
 
-	return c.request(url)
+	return c.request(u)
 }
 
 // FetchFieldNames fetches the names of the available log fields.
 func (c *Client) FetchFieldNames(zoneID string) (*Meta, error) {
-	url := fmt.Sprintf("%s/zones/%s/logs/received/fields", c.endpoint, zoneID)
-	return c.request(url)
+	u, err := url.Parse(
+		fmt.Sprintf(
+			"%s/zones/%s/logs/received/fields",
+			c.endpoint,
+			zoneID,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return c.request(u)
 }
 
-func (c *Client) request(url string) (*Meta, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (c *Client) request(u *url.URL) (*Meta, error) {
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create a request object")
 	}
@@ -174,7 +204,7 @@ func (c *Client) request(url string) (*Meta, error) {
 	meta := &Meta{
 		StatusCode: resp.StatusCode,
 		Duration:   makeTimestamp() - start,
-		URL:        url,
+		URL:        u.String(),
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {

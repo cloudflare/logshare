@@ -66,11 +66,11 @@ GLOBAL OPTIONS:
    --zone-id value                The zone ID of the zone you are requesting logs for
    --zone-name value              The name of the zone you are requesting logs for. logshare will automatically fetch the ID of this zone from the Cloudflare API
    --ray-id value                 The ray ID to request logs from (instead of a timestamp)
-   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1511219860)
-   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1511220460)
+   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1515607083)
+   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1515607683)
    --count value                  The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period (default: 1)
-   --by-received                  (default behaviour) Retrieve logs by the processing time on Cloudflare. This mode allows you to fetch all available logs vs. based on the log timestamps themselves.
-   --legacy-endpoint              (deprecated) Retrieve logs using the 'legacy' endpoint, where results are returned by log timestamp.
+   --sample value                 The sampling rate from 0.1 (10%) to 0.9 (90%) to use when retrieving logs (default: 0)
+   --timestamp-format value       The timestamp format to use in logs: one of 'unix', 'unixnano', or 'rfc3339' (default: "unixnano")
    --fields value                 Select specific fields to retrieve in the log response. Pass a comma-separated list to fields to specify multiple fields.
    --list-fields                  List the available log fields for use with the --fields flag
    --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
@@ -84,18 +84,25 @@ In order to make retrieving logs more straightforward, you can provide the zone 
 `--zone-name=` option, and logshare-cli will fetch the relevant zone ID for this zone before
 retrieving logs.
 
-
 ### Useful Tips
 
 Although `logshare-cli` can be used in multiple ways, and for ingesting logs into a larger system, a
 common use-case is ad-hoc analysis of logs when troubleshooting or analyzing traffic. Here are a few examples that
 leverage [`jq`](https://stedolan.github.io/jq/) to parse log output.
 
+#### Timestamps & Sampling
+
+By default, the Log Share endpoint provides logs with Unix nanosecond timestamps and the full set of available logs.
+
+* Pass the `timestamp-format=` flag with one of `unix`, `unixnano` (default) or `rfc3339` to customize the timestamps.
+* Pass the `sample=` flag with a value between `0.1` (10%) or `0.9` (90%) to retrieve a random sample of logs.
+
 #### Distribution of Edge (client-facing) Response Status Codes
 
 ```
 $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time=1453307871 --count=20000 | jq '.[] | .EdgeResponseStatus empty' | sort -rn | uniq -c | sort -rn
 ```
+
 ```
 35954 200
 4968 301
@@ -117,6 +124,7 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --sta
 ```
 $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --list-fields | jq
 ```
+
 ```
 {
   "CacheCacheStatus": "unknown | miss | expired | updating | stale | hit | ignored | bypass | revalidated",
@@ -162,7 +170,7 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
 `logshare-cli` can be used to upload logs directly to GCS. In order to do so both `--google-storage-bucket` and `--google-project-id` must be provided. This will reroute log output to a file named `cloudflare_els_<zone-id>_<unix-ts>.json` in the bucket/project selected. The bucket will be created if it was not already, but the project must already exist.
 
 ```
-logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time 1502438905 
+logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --start-time 1502438905
 --count 500 --google-storage-bucket=my-bucket --google-project-id=my-project-id
 ```
 
