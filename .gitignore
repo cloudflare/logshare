@@ -1,0 +1,4 @@
+# Ignore the logshare binary
+cmd/logshare-cli/logshare-cli
+
+
