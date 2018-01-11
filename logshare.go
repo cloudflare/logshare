@@ -129,7 +129,7 @@ func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
 		return nil, err
 	}
 
-	if c.byReceived && len(c.fields) > 1 {
+	if c.byReceived && len(c.fields) >= 1 {
 		params.Set("fields", strings.Join(c.fields, ","))
 	}
 
