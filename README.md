@@ -147,7 +147,9 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
   "ClientSrcPort": "Client source port",
   "EdgeColoID": "Cloudflare edge colo id",
   "EdgeEndTimestamp": "Unix nanosecond timestamp the edge finished sending response to the client",
-  "EdgePathingStatus": "Edge pathing status",
+  "EdgePathingOp": "Indicates what type of response was issued for this request (unknown = no specific action)",
+  "EdgePathingSrc": "Details how the request was classified based on security checks (unknown = no specific classification)",
+  "EdgePathingStatus": "Indicates what data was used to determine the handling of this request (unknown = no data)",
   "EdgeResponseBytes": "Number of bytes returned by the edge to the client",
   "EdgeResponseCompressionRatio": "Edge response compression ratio",
   "EdgeResponseStatus": "HTTP status code returned by Cloudflare to the client",
@@ -160,7 +162,11 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
   "OriginResponseTime": "Number of nanoseconds it took the origin to return the response to edge",
   "RayID": "Ray ID of the request",
   "WAFAction": "Action taken by the WAF, if triggered",
+  "WAFFlags": "Additional configuration flags: simulate (0x1) | null",
+  "WAFMatchedVar": "The full name of the most-recently matched variable",
+  "WAFProfile": "WAF profile: low | med | high",
   "WAFRuleID": "ID of the applied WAF rule",
+  "WAFRuleMessage": "Rule message associated with the triggered rule",
   "ZoneID": "Internal zone ID"
 }
 ```
