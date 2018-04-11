@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -208,7 +209,14 @@ func (c *Client) request(u *url.URL) (*Meta, error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return meta, errors.Errorf("HTTP status %d: request failed", resp.StatusCode)
+		// Read errors, but provide a cap on total read size for safety.
+		lr := io.LimitReader(resp.Body, 1000000)
+		body, err := ioutil.ReadAll(lr)
+		if err != nil {
+			return meta, errors.Wrapf(err, "HTTP status %d: request failed", resp.StatusCode)
+		}
+
+		return meta, errors.Errorf("HTTP status %d: request failed: %s", resp.StatusCode, body)
 	}
 
 	// Explicitly handle the 204 No Content case.
