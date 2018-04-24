@@ -50,6 +50,8 @@ type Options struct {
 	Headers http.Header
 	// Destination to stream logs to.
 	Dest io.Writer
+	// Multiple destinations to stream logs to. Both Dest and MultiDest can be used (Dest + MultiDest).
+	MultiDest []io.Writer
 	// Fetch logs by the processing/received timestamp
 	ByReceived bool
 	// Which timestamp format to use: one of "unix", "unixnano", "rfc3339"
@@ -92,7 +94,7 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		apiEmail:   apiEmail,
 		endpoint:   apiURL,
 		httpClient: http.DefaultClient,
-		dest:       os.Stdout,
+		dest:       io.MultiWriter(os.Stdout),
 		headers:    make(http.Header),
 		byReceived: byReceived,
 	}
@@ -102,7 +104,13 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		client.sample = options.Sample
 
 		if options.Dest != nil {
-			client.dest = options.Dest
+			if options.MultiDest == nil {
+				options.MultiDest = make([]io.Writer, 0, 1)
+			}
+			options.MultiDest = append(options.MultiDest, options.Dest)
+		}
+		if options.MultiDest != nil {
+			client.dest = io.MultiWriter(options.MultiDest...)
 		}
 
 		if options.Fields != nil {
