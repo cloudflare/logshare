@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"io"
 	"log"
 	"os"
@@ -78,7 +79,10 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.zoneID = id
 		}
 
-		var outputWriter io.Writer
+		outputWriters := make([]io.Writer, 0)
+		if !conf.noStdout {
+			outputWriters = append(outputWriters, os.Stdout)
+		}
 		if conf.googleStorageBucket != "" {
 			fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
@@ -87,7 +91,18 @@ func run(conf *config) func(c *cli.Context) error {
 				return err
 			}
 			defer gcsWriter.Close()
-			outputWriter = gcsWriter
+			outputWriters = append(outputWriters, gcsWriter)
+		}
+		if conf.fileDest != "" {
+			destFile, err := os.Create(conf.fileDest)
+			if err != nil {
+				return err
+			}
+			defer destFile.Close()
+			outputWriters = append(outputWriters, bufio.NewWriter(destFile))
+		}
+		if len(outputWriters) == 0 {
+			log.Printf("Warning: No output writers")
 		}
 
 		client, err := logshare.New(
@@ -95,7 +110,7 @@ func run(conf *config) func(c *cli.Context) error {
 			conf.apiEmail,
 			&logshare.Options{
 				Fields:          conf.fields,
-				Dest:            outputWriter,
+				MultiDest:       outputWriters,
 				ByReceived:      true,
 				Sample:          conf.sample,
 				TimestampFormat: conf.timestampFormat,
@@ -143,6 +158,8 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.listFields = c.Bool("list-fields")
 	conf.googleStorageBucket = c.String("google-storage-bucket")
 	conf.googleProjectID = c.String("google-project-id")
+	conf.fileDest = c.String("file-dest")
+	conf.noStdout = c.Bool("no-stdout")
 
 	return conf.Validate()
 }
@@ -161,6 +178,8 @@ type config struct {
 	listFields          bool
 	googleStorageBucket string
 	googleProjectID     string
+	fileDest            string
+	noStdout            bool
 }
 
 func (conf *config) Validate() error {
@@ -245,5 +264,13 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "google-project-id",
 		Usage: "Project ID of the Google Cloud Storage Bucket to upload logs to",
+	},
+	cli.StringFlag{
+		Name:  "file-dest",
+		Usage: "File destination to save logs to",
+	},
+	cli.BoolFlag{
+		Name:  "no-stdout",
+		Usage: "Disable logs output to Stdout",
 	},
 }
