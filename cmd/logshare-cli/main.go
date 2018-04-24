@@ -98,8 +98,12 @@ func run(conf *config) func(c *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			defer destFile.Close()
-			outputWriters = append(outputWriters, bufio.NewWriter(destFile))
+			buf := bufio.NewWriter(destFile)
+			defer func() {
+				buf.Flush()
+				destFile.Close()
+			}()
+			outputWriters = append(outputWriters, buf)
 		}
 		if len(outputWriters) == 0 {
 			log.Printf("Warning: No output writers")
