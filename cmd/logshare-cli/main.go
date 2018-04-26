@@ -106,7 +106,7 @@ func run(conf *config) func(c *cli.Context) error {
 			outputWriters = append(outputWriters, buf)
 		}
 		if len(outputWriters) == 0 {
-			log.Printf("Warning: No output writers")
+			log.Printf("Warning: No destinations have been set. All output will be siletly dropped.")
 		}
 
 		client, err := logshare.New(
@@ -271,7 +271,7 @@ var flags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "file-dest",
-		Usage: "File destination to save logs to",
+		Usage: "Creates a new file (or overwrites and existing file) to save logs to",
 	},
 	cli.BoolFlag{
 		Name:  "no-stdout",
