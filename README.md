@@ -66,8 +66,8 @@ GLOBAL OPTIONS:
    --zone-id value                The zone ID of the zone you are requesting logs for
    --zone-name value              The name of the zone you are requesting logs for. logshare will automatically fetch the ID of this zone from the Cloudflare API
    --ray-id value                 The ray ID to request logs from (instead of a timestamp)
-   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1515607083)
-   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1515607683)
+   --start-time value             The timestamp (in Unix seconds) to request logs from. Defaults to 30 minutes behind the current time (default: 1524538812)
+   --end-time value               The timestamp (in Unix seconds) to request logs to. Defaults to 20 minutes behind the current time (default: 1524539412)
    --count value                  The number (count) of logs to retrieve. Pass '-1' to retrieve all logs for the given time period (default: 1)
    --sample value                 The sampling rate from 0.1 (10%) to 0.9 (90%) to use when retrieving logs (default: 0)
    --timestamp-format value       The timestamp format to use in logs: one of 'unix', 'unixnano', or 'rfc3339' (default: "unixnano")
@@ -75,6 +75,8 @@ GLOBAL OPTIONS:
    --list-fields                  List the available log fields for use with the --fields flag
    --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
    --google-project-id value      Project ID of the Google Cloud Storage Bucket to upload logs to
+   --file-dest value              File destination to save logs to
+   --no-stdout                    Disable logs output to Stdout
    --help, -h                     show help
    --version, -v                  print the version
 ```
