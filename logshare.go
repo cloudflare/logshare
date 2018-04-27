@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	apiURL     = "https://api.cloudflare.com/client/v4"
-	byRequest  = "requests"
-	byReceived = "received"
+	apiURL      = "https://api.cloudflare.com"
+	apiEndpoint = "client/v4"
+	byRequest   = "requests"
+	byReceived  = "received"
 )
 
 const (
@@ -44,6 +45,8 @@ type Client struct {
 
 // Options for configuring log retrieval requests.
 type Options struct {
+	// Provide a custom API URL. Defaults to https://api.cloudflare.com.
+	ApiURL string
 	// Provide a custom HTTP client. Defaults to a barebones *http.Client.
 	HTTPClient *http.Client
 	// Provide custom HTTP request headers.
@@ -90,7 +93,7 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 	client := &Client{
 		apiKey:     apiKey,
 		apiEmail:   apiEmail,
-		endpoint:   apiURL,
+		endpoint:   fmt.Sprintf("%s/%s", apiURL, apiEndpoint),
 		httpClient: http.DefaultClient,
 		dest:       os.Stdout,
 		headers:    make(http.Header),
@@ -107,6 +110,13 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 
 		if options.Fields != nil {
 			client.fields = options.Fields
+		}
+
+		if options.HTTPClient != nil {
+			client.httpClient = options.HTTPClient
+		}
+		if options.ApiURL != "" {
+			client.endpoint = fmt.Sprintf("%s/%s", options.ApiURL, apiEndpoint)
 		}
 	}
 
