@@ -93,6 +93,36 @@ func TestClientByRequests(t *testing.T) {
 	assert.Equal(t, 2, meta.Count)
 }
 
+func TestClientGetFromTimeStampFailBadUrl(t *testing.T) {
+	client, err := New(
+		apiKey,
+		accountEmail,
+		&Options{
+			ApiURL: ":+_badurl",
+		},
+	)
+	if err != nil {
+		t.Fatal("Failed to create new logshare.Client:", err)
+	}
+	_, err = client.GetFromTimestamp(zoneId, startTimestamp, endTimestamp, count)
+	assert.Error(t, err)
+}
+
+func TestClientFetchFieldNamesFailBadUrl(t *testing.T) {
+	client, err := New(
+		apiKey,
+		accountEmail,
+		&Options{
+			ApiURL: ":+_badurl",
+		},
+	)
+	if err != nil {
+		t.Fatal("Failed to create new logshare.Client:", err)
+	}
+	_, err = client.FetchFieldNames(zoneId)
+	assert.Error(t, err)
+}
+
 func TestClientFailNoContent(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		checkRequestHeaders(t, r)
