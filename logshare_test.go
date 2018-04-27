@@ -1,6 +1,8 @@
 package logshare
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -28,6 +30,23 @@ func checkRequestHeaders(t *testing.T, r *http.Request) {
 	assert.Equal(t, "application/json", r.Header.Get("Accept"))
 }
 
+func getTestClient(ts *httptest.Server) *http.Client {
+	cert, err := x509.ParseCertificate(ts.TLS.Certificates[0].Certificate[0])
+	if err != nil {
+		return nil
+	}
+	certpool := x509.NewCertPool()
+	certpool.AddCert(cert)
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: certpool,
+			},
+		},
+	}
+	return client
+}
+
 func TestInvalidClient(t *testing.T) {
 	_, err := New("", "", nil)
 	assert.EqualError(t, err, "apiKey cannot be empty")
@@ -51,7 +70,7 @@ func TestClientByRequests(t *testing.T) {
 		fmt.Fprintln(w, exampleResponse)
 	}))
 	defer ts.Close()
-	httpClient := ts.Client()
+	httpClient := getTestClient(ts)
 
 	client, err := New(
 		apiKey,
@@ -80,7 +99,7 @@ func TestClientFailNoContent(t *testing.T) {
 		w.WriteHeader(204)
 	}))
 	defer ts.Close()
-	httpClient := ts.Client()
+	httpClient := getTestClient(ts)
 
 	client, err := New(
 		apiKey,
@@ -110,7 +129,7 @@ func TestClientByReceivedFields(t *testing.T) {
 		fmt.Fprintln(w, exampleResponse)
 	}))
 	defer ts.Close()
-	httpClient := ts.Client()
+	httpClient := getTestClient(ts)
 
 	client, err := New(
 		apiKey,
@@ -139,7 +158,7 @@ func TestClientFailedOtherError(t *testing.T) {
 		fmt.Fprint(w, "Internal Server Error")
 	}))
 	defer ts.Close()
-	httpClient := ts.Client()
+	httpClient := getTestClient(ts)
 
 	client, err := New(
 		apiKey,
@@ -167,7 +186,8 @@ func TestClientFetchFieldNames(t *testing.T) {
 		fmt.Fprintln(w, exampleFieldsResponse)
 	}))
 	defer ts.Close()
-	httpClient := ts.Client()
+	httpClient := getTestClient(ts)
+
 	client, err := New(
 		apiKey,
 		accountEmail,
