@@ -151,6 +151,8 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
   "EdgePathingOp": "Indicates what type of response was issued for this request (unknown = no specific action)",
   "EdgePathingSrc": "Details how the request was classified based on security checks (unknown = no specific classification)",
   "EdgePathingStatus": "Indicates what data was used to determine the handling of this request (unknown = no data)",
+  "EdgeRateLimitAction": "string: The action taken by the blocking rule; empty if no action taken. (beta)",
+  "EdgeRateLimitID": "uint64: The internal rule ID of the rate-limiting rule that triggered a block (ban) or simulate action. 0 if no action taken. (beta)",
   "EdgeRequestHost": "Host header on the request from the edge to the origin (beta)",
   "EdgeResponseBytes": "Number of bytes returned by the edge to the client",
   "EdgeResponseCompressionRatio": "Edge response compression ratio",
@@ -165,6 +167,7 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
   "OriginResponseStatus": "Status returned by the origin server",
   "OriginResponseTime": "Number of nanoseconds it took the origin to return the response to edge",
   "OriginSSLProtocol": "SSL (TLS) protocol used to connect to the origin (beta)",
+  "ParentRayID": "Ray ID of the parent request, if this request was made through a worker script (beta)",
   "RayID": "Ray ID of the request",
   "SecurityLevel": "The security level configured at the time of this request. This is used to determine the sensitivity of the IP Reputation system.",
   "WAFAction": "Action taken by the WAF, if triggered",
@@ -173,6 +176,10 @@ $ logshare-cli --api-key=<snip> --api-email=<snip> --zone-name=example.com --lis
   "WAFProfile": "WAF profile: low | med | high",
   "WAFRuleID": "ID of the applied WAF rule",
   "WAFRuleMessage": "Rule message associated with the triggered rule",
+  "WorkerCPUTime": "Amount of time in microseconds spent executing a worker, if any (beta)",
+  "WorkerStatus": "Status returned from worker daemon as a string (beta)",
+  "WorkerSubrequest": "Whether or not this request was a worker subrequest (beta)",
+  "WorkerSubrequestCount": "Number of subrequests issued by a worker when handling this request (beta)",
   "ZoneID": "Internal zone ID"
 }
 ```
