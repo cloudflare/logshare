@@ -31,7 +31,6 @@ type Client struct {
 	endpoint        string
 	apiKey          string
 	apiEmail        string
-	byReceived      bool
 	sample          float64
 	timestampFormat string
 	fields          []string
@@ -48,8 +47,6 @@ type Options struct {
 	Headers http.Header
 	// Destination to stream logs to.
 	Dest io.Writer
-	// Fetch logs by the processing/received timestamp
-	ByReceived bool
 	// Which timestamp format to use: one of "unix", "unixnano", "rfc3339"
 	TimestampFormat string
 	// Whether to only retrieve a sample of logs (0.1 to 0.9)
@@ -79,12 +76,6 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		return nil, errors.New("apiEmail cannot be empty")
 	}
 
-	// Default to the received endpoint.
-	var byReceived = true
-	if options != nil {
-		byReceived = options.ByReceived
-	}
-
 	client := &Client{
 		apiKey:     apiKey,
 		apiEmail:   apiEmail,
@@ -92,7 +83,6 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		httpClient: http.DefaultClient,
 		dest:       os.Stdout,
 		headers:    make(http.Header),
-		byReceived: byReceived,
 	}
 
 	if options != nil {

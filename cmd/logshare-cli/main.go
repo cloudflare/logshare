@@ -96,7 +96,6 @@ func run(conf *config) func(c *cli.Context) error {
 			&logshare.Options{
 				Fields:          conf.fields,
 				Dest:            outputWriter,
-				ByReceived:      true,
 				Sample:          conf.sample,
 				TimestampFormat: conf.timestampFormat,
 			})
@@ -172,7 +171,6 @@ type config struct {
 }
 
 func (conf *config) Validate() error {
-
 	if conf.apiKey == "" || conf.apiEmail == "" {
 		return errors.New("Must provide both api-key and api-email")
 	}
