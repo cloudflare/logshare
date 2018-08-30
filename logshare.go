@@ -135,7 +135,7 @@ func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
 	}
 
 	if c.sample != 0.0 {
-		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 1, 64))
+		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 3, 64))
 	}
 
 	if c.timestampFormat != "" {
