@@ -69,6 +69,10 @@ func run(conf *config) func(c *cli.Context) error {
 		// Populate the zoneID if it wasn't supplied.
 		if conf.zoneID == "" {
 			cf, err := cloudflare.New(conf.apiKey, conf.apiEmail)
+			if err != nil {
+				cli.ShowAppHelp(c)
+				return err
+			}
 			id, err := cf.ZoneIDByName(conf.zoneName)
 			if err != nil {
 				cli.ShowAppHelp(c)
