@@ -75,6 +75,7 @@ GLOBAL OPTIONS:
    --list-fields                  List the available log fields for use with the --fields flag
    --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
    --google-project-id value      Project ID of the Google Cloud Storage Bucket to upload logs to
+   --skip-create-bucket           Do not attempt to create the bucket specified by --google-storage-bucket
    --help, -h                     show help
    --version, -v                  print the version
 ```
