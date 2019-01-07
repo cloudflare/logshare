@@ -115,17 +115,39 @@ func run(conf *config) func(c *cli.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch field names")
 			}
+		} else if conf.iterate {
+			// Iterate over the time range in 1h (3600s) blocks, making sure to
+			// stay within the request rate limit (1 request/5 seconds)
+			hourStart := conf.startTime
+			hourEnd := hourStart + 3600
+			var previousRequest time.Time
+			for hourStart < conf.endTime {
+				if hourEnd > conf.endTime {
+					hourEnd = conf.endTime
+				}
+				time.Sleep(5*time.Second - time.Since(previousRequest))
+				previousRequest = time.Now()
+				meta, err = client.GetFromTimestamp(
+					conf.zoneID, hourStart, hourEnd, conf.count)
+				if err != nil {
+					return errors.Wrap(err, "failed to fetch via timestamp")
+				}
+				log.Printf("HTTP status %d | %dms | %s",
+					meta.StatusCode, meta.Duration, meta.URL)
+				log.Printf("Retrieved %d logs", meta.Count)
+				hourStart = hourEnd
+				hourEnd += 3600
+			}
 		} else {
 			meta, err = client.GetFromTimestamp(
 				conf.zoneID, conf.startTime, conf.endTime, conf.count)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch via timestamp")
 			}
+			log.Printf("HTTP status %d | %dms | %s",
+				meta.StatusCode, meta.Duration, meta.URL)
+			log.Printf("Retrieved %d logs", meta.Count)
 		}
-
-		log.Printf("HTTP status %d | %dms | %s",
-			meta.StatusCode, meta.Duration, meta.URL)
-		log.Printf("Retrieved %d logs", meta.Count)
 
 		return nil
 	}
@@ -146,6 +168,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.googleStorageBucket = c.String("google-storage-bucket")
 	conf.googleProjectID = c.String("google-project-id")
 	conf.skipCreateBucket = c.Bool("skip-create-bucket")
+	conf.iterate = c.Bool("iterate")
 
 	return conf.Validate()
 }
@@ -165,6 +188,7 @@ type config struct {
 	googleStorageBucket string
 	googleProjectID     string
 	skipCreateBucket    bool
+	iterate             bool
 }
 
 func (conf *config) Validate() error {
@@ -183,6 +207,10 @@ func (conf *config) Validate() error {
 
 	if (conf.googleStorageBucket == "") != (conf.googleProjectID == "") {
 		return errors.New("Both google-storage-bucket and google-project-id must be provided to upload to Google Storage")
+	}
+
+	if conf.endTime > (conf.startTime+3600) && conf.iterate == false {
+		return errors.New("Time range too long; ranges longer than 1h0m0s require the --iterate option")
 	}
 
 	return nil
@@ -253,5 +281,9 @@ var flags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "skip-create-bucket",
 		Usage: "Do not attempt to create the bucket specified by --google-storage-bucket",
+	},
+	cli.BoolFlag{
+		Name:  "iterate",
+		Usage: "Iterate over time ranges longer than normally allowed by the Logpull Rest API",
 	},
 }
