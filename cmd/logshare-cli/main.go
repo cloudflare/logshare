@@ -151,7 +151,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.googleStorageBucket = c.String("google-storage-bucket")
 	conf.googleProjectID = c.String("google-project-id")
 	conf.skipCreateBucket = c.Bool("skip-create-bucket")
-  conf.rayID = c.String("ray-id")
+	conf.rayID = c.String("ray-id")
 
 	return conf.Validate()
 }
@@ -171,7 +171,7 @@ type config struct {
 	googleStorageBucket string
 	googleProjectID     string
 	skipCreateBucket    bool
-  rayID               string
+	rayID               string
 }
 
 func (conf *config) Validate() error {
