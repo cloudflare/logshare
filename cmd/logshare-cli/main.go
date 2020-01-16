@@ -38,7 +38,7 @@ func main() {
 	}
 }
 
-func setupGoogleStr(projectID string, bucketName string, filename string) (*gcs.Writer, error) {
+func setupGoogleStr(projectID string, bucketName string, filename string, skipCreateBucket bool) (*gcs.Writer, error) {
 	gCtx := context.Background()
 
 	gClient, error := gcs.NewClient(gCtx)
@@ -48,11 +48,13 @@ func setupGoogleStr(projectID string, bucketName string, filename string) (*gcs.
 
 	gBucket := gClient.Bucket(bucketName)
 
-	if error = gBucket.Create(gCtx, projectID, nil); strings.Contains(error.Error(), "409") {
-		log.Printf("Bucket %v already exists.\n", bucketName)
-		error = nil
-	} else if error != nil {
-		return nil, error
+	if !skipCreateBucket {
+		if error = gBucket.Create(gCtx, projectID, nil); strings.Contains(error.Error(), "409") {
+			log.Printf("Bucket %v already exists.\n", bucketName)
+			error = nil
+		} else if error != nil {
+			return nil, error
+		}
 	}
 
 	obj := gBucket.Object(filename)
@@ -82,7 +84,7 @@ func run(conf *config) func(c *cli.Context) error {
 		if conf.googleStorageBucket != "" {
 			fileName := "cloudflare_els_" + conf.zoneID + "_" + strconv.Itoa(int(time.Now().Unix())) + ".json"
 
-			gcsWriter, err := setupGoogleStr(conf.googleProjectID, conf.googleStorageBucket, fileName)
+			gcsWriter, err := setupGoogleStr(conf.googleProjectID, conf.googleStorageBucket, fileName, conf.skipCreateBucket)
 			if err != nil {
 				return err
 			}
@@ -148,7 +150,8 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.listFields = c.Bool("list-fields")
 	conf.googleStorageBucket = c.String("google-storage-bucket")
 	conf.googleProjectID = c.String("google-project-id")
-	conf.rayID = c.String("ray-id")
+	conf.skipCreateBucket = c.Bool("skip-create-bucket")
+  conf.rayID = c.String("ray-id")
 
 	return conf.Validate()
 }
@@ -167,7 +170,8 @@ type config struct {
 	listFields          bool
 	googleStorageBucket string
 	googleProjectID     string
-	rayID               string
+	skipCreateBucket    bool
+  rayID               string
 }
 
 func (conf *config) Validate() error {
@@ -251,5 +255,9 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "google-project-id",
 		Usage: "Project ID of the Google Cloud Storage Bucket to upload logs to",
+	},
+	cli.BoolFlag{
+		Name:  "skip-create-bucket",
+		Usage: "Do not attempt to create the bucket specified by --google-storage-bucket",
 	},
 }

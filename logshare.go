@@ -49,7 +49,7 @@ type Options struct {
 	Dest io.Writer
 	// Which timestamp format to use: one of "unix", "unixnano", "rfc3339"
 	TimestampFormat string
-	// Whether to only retrieve a sample of logs (0.1 to 0.9)
+	// Whether to only retrieve a sample of logs (0.001 to 1)
 	Sample float64
 	// The fields to return in the log responses
 	Fields []string
@@ -130,7 +130,7 @@ func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
 	}
 
 	if endpointType != byRayID && c.sample != 0.0 {
-		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 1, 64))
+		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 3, 64))
 	}
 
 	if c.timestampFormat != "" {

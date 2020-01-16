@@ -75,6 +75,7 @@ GLOBAL OPTIONS:
    --list-fields                  List the available log fields for use with the --fields flag
    --google-storage-bucket value  Full URI to a Google Cloud Storage Bucket to upload logs to
    --google-project-id value      Project ID of the Google Cloud Storage Bucket to upload logs to
+   --skip-create-bucket           Do not attempt to create the bucket specified by --google-storage-bucket
    --help, -h                     show help
    --version, -v                  print the version
 ```
@@ -95,7 +96,7 @@ leverage [`jq`](https://stedolan.github.io/jq/) to parse log output.
 By default, the Log Share endpoint provides logs with Unix nanosecond timestamps and the full set of available logs.
 
 * Pass the `timestamp-format=` flag with one of `unix`, `unixnano` (default) or `rfc3339` to customize the timestamps.
-* Pass the `sample=` flag with a value between `0.1` (10%) or `0.9` (90%) to retrieve a random sample of logs.
+* Pass the `sample=` flag with a value between `0.001` (0.1%) or `1` (100%) to retrieve a random sample of logs.
 
 #### Distribution of Edge (client-facing) Response Status Codes
 
