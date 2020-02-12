@@ -21,7 +21,7 @@ const (
 	unix       = "unix"
 	unixNano   = "unixnano"
 	rfc3339    = "rfc3339"
-	byRecieved = "received"
+	byReceived = "received"
 	byRayID    = "rayids"
 )
 
@@ -102,7 +102,7 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 }
 
 func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
-	endpointType := byRecieved
+	endpointType := byReceived
 
 	rayID := params.Get("rayid")
 	if rayID != "" {
@@ -184,7 +184,7 @@ func (c *Client) FetchFieldNames(zoneID string) (*Meta, error) {
 			"%s/zones/%s/logs/%s/fields",
 			c.endpoint,
 			zoneID,
-			byRecieved,
+			byReceived,
 		),
 	)
 	if err != nil {
