@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -17,14 +18,11 @@ import (
 
 const (
 	apiURL     = "https://api.cloudflare.com/client/v4"
-	byRequest  = "requests"
+	unix       = "unix"
+	unixNano   = "unixnano"
+	rfc3339    = "rfc3339"
 	byReceived = "received"
-)
-
-const (
-	unix     = "unix"
-	unixNano = "unixnano"
-	rfc3339  = "rfc3339"
+	byRayID    = "rayids"
 )
 
 // Client holds the current API credentials & HTTP client configuration. Client
@@ -33,7 +31,6 @@ type Client struct {
 	endpoint        string
 	apiKey          string
 	apiEmail        string
-	byReceived      bool
 	sample          float64
 	timestampFormat string
 	fields          []string
@@ -50,8 +47,6 @@ type Options struct {
 	Headers http.Header
 	// Destination to stream logs to.
 	Dest io.Writer
-	// Fetch logs by the processing/received timestamp
-	ByReceived bool
 	// Which timestamp format to use: one of "unix", "unixnano", "rfc3339"
 	TimestampFormat string
 	// Whether to only retrieve a sample of logs (0.001 to 1)
@@ -81,12 +76,6 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		return nil, errors.New("apiEmail cannot be empty")
 	}
 
-	// Default to the received endpoint.
-	var byReceived = true
-	if options != nil {
-		byReceived = options.ByReceived
-	}
-
 	client := &Client{
 		apiKey:     apiKey,
 		apiEmail:   apiEmail,
@@ -94,7 +83,6 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 		httpClient: http.DefaultClient,
 		dest:       os.Stdout,
 		headers:    make(http.Header),
-		byReceived: byReceived,
 	}
 
 	if options != nil {
@@ -114,27 +102,34 @@ func New(apiKey string, apiEmail string, options *Options) (*Client, error) {
 }
 
 func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
-	endpoint := byReceived
-	if !c.byReceived {
-		endpoint = byRequest
+	endpointType := byReceived
+
+	rayID := params.Get("rayid")
+	if rayID != "" {
+		endpointType = byRayID
+		params.Del("rayid")
 	}
 
 	u, err := url.Parse(
 		fmt.Sprintf("%s/zones/%s/logs/%s",
 			c.endpoint,
 			zoneID,
-			endpoint,
+			endpointType,
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.byReceived && len(c.fields) >= 1 {
+	if endpointType == byRayID {
+		u.Path = path.Join(u.Path, rayID)
+	}
+
+	if len(c.fields) >= 1 {
 		params.Set("fields", strings.Join(c.fields, ","))
 	}
 
-	if c.sample != 0.0 {
+	if endpointType != byRayID && c.sample != 0.0 {
 		params.Set("sample", strconv.FormatFloat(c.sample, 'f', 3, 64))
 	}
 
@@ -143,7 +138,21 @@ func (c *Client) buildURL(zoneID string, params url.Values) (*url.URL, error) {
 	}
 
 	u.RawQuery = params.Encode()
+
 	return u, nil
+}
+
+// GetFromRayID fetches a log entry based on a provided Ray ID value.
+func (c *Client) GetFromRayID(zoneID string, rayID string) (*Meta, error) {
+	params := url.Values{}
+	params.Set("rayid", rayID)
+
+	url, err := c.buildURL(zoneID, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.request(url)
 }
 
 // GetFromTimestamp fetches logs between the start and end timestamps provided,
@@ -172,9 +181,10 @@ func (c *Client) GetFromTimestamp(zoneID string, start int64, end int64, count i
 func (c *Client) FetchFieldNames(zoneID string) (*Meta, error) {
 	u, err := url.Parse(
 		fmt.Sprintf(
-			"%s/zones/%s/logs/received/fields",
+			"%s/zones/%s/logs/%s/fields",
 			c.endpoint,
 			zoneID,
+			byReceived,
 		),
 	)
 	if err != nil {

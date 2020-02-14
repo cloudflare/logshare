@@ -98,7 +98,6 @@ func run(conf *config) func(c *cli.Context) error {
 			&logshare.Options{
 				Fields:          conf.fields,
 				Dest:            outputWriter,
-				ByReceived:      true,
 				Sample:          conf.sample,
 				TimestampFormat: conf.timestampFormat,
 			})
@@ -110,7 +109,13 @@ func run(conf *config) func(c *cli.Context) error {
 		// endpoint.
 		var meta *logshare.Meta
 
-		if conf.listFields {
+		if conf.rayID != "" {
+			meta, err = client.GetFromRayID(conf.zoneID, conf.rayID)
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch via ray ID")
+			}
+
+		} else if conf.listFields {
 			meta, err = client.FetchFieldNames(conf.zoneID)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch field names")
@@ -146,6 +151,7 @@ func parseFlags(conf *config, c *cli.Context) error {
 	conf.googleStorageBucket = c.String("google-storage-bucket")
 	conf.googleProjectID = c.String("google-project-id")
 	conf.skipCreateBucket = c.Bool("skip-create-bucket")
+	conf.rayID = c.String("ray-id")
 
 	return conf.Validate()
 }
@@ -165,10 +171,10 @@ type config struct {
 	googleStorageBucket string
 	googleProjectID     string
 	skipCreateBucket    bool
+	rayID               string
 }
 
 func (conf *config) Validate() error {
-
 	if conf.apiKey == "" || conf.apiEmail == "" {
 		return errors.New("Must provide both api-key and api-email")
 	}
